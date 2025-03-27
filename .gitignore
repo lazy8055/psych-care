@@ -1,0 +1,40 @@
+# Node.js dependencies
+Frontend/node_modules/
+Frontend/package-lock.json
+Frontend/yarn.lock
+
+# Expo (if using)
+Frontend/.expo/
+Frontend/.expo-shared/
+
+# Build files
+Frontend/android/app/build/
+Frontend/android/build/
+Frontend/ios/Pods/
+Frontend/ios/build/
+
+# Temporary files
+Frontend/*.log
+Frontend/*.tmp
+Frontend/*.swp
+Frontend/*.swo
+Frontend/*.swn
+
+# OS-specific files
+Frontend/.DS_Store
+Frontend/Thumbs.db
+
+# Metro bundler cache
+Frontend/metro-cache/
+
+# React Native cache
+Frontend/react-native-packager-cache/
+
+# Environment variables
+Backend2/.env
+Frontend/.env.local
+Frontend/.env.*.local
+
+# IDE/editor files
+Frontend/.vscode/
+Frontend/.idea/
