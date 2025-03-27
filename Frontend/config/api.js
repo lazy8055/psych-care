@@ -1,5 +1,5 @@
 // API configuration
-const API_BASE_URL = 'http://10.11.151.147:5000';
+const API_BASE_URL = 'http://10.16.50.27:5000';
 
 export const API_ENDPOINTS = {
   LOGIN: `${API_BASE_URL}/auth/login`,

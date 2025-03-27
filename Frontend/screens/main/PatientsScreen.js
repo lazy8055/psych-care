@@ -18,7 +18,7 @@ import { useNavigation } from "@react-navigation/native"
 import { Ionicons } from "@expo/vector-icons"
 import theme from "../../config/theme"
 import { useAuth } from "../../context/AuthContext"
-import Header from '../../components/Header';
+
 
 const { width } = Dimensions.get("window")
 
@@ -216,7 +216,7 @@ const PatientsScreen = () => {
                   <Chip mode="outlined" style={styles.diagnosisChip} textStyle={{ fontSize: 12 }}>
                     {item.diagnosis}
                   </Chip>
-                  <Text style={styles.lastVisit}>Last visit: {item.lastVisit}</Text>
+                  <Text style={styles.lastVisit}>{"\n"} Last visit: {item.lastVisit}</Text>
                 </View>
               </View>
               <Ionicons name="chevron-forward" size={24} color={theme.colors.primary} style={styles.arrowIcon} />
@@ -239,12 +239,7 @@ const PatientsScreen = () => {
 
   return (
     <View style={styles.container}>
-        <Header 
-        title="My Patients" 
-        subtitle={`${filteredPatients.length} ${filter.toLowerCase()} patients`}
-        showAvatar={true}
-        
-      />
+       
         <Searchbar
           placeholder="Search patients..."
           onChangeText={setSearchQuery}
@@ -365,8 +360,9 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
   },
   diagnosisChip: {
-    height: 24,
+    height: 34,
     backgroundColor: `${theme.colors.primary}10`,
+   
     marginBottom: 4,
   },
   lastVisit: {
