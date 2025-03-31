@@ -8,9 +8,10 @@ export const API_ENDPOINTS = {
   PATIENT_DETAIL: (id) => `${API_BASE_URL}/patients/${id}`,
   APPOINTMENTS: `${API_BASE_URL}/appointments`,
   CHAT: `${API_BASE_URL}/chat`,
-  PROFILE: `${API_BASE_URL}/profile`,
-  VIDEOS: `${API_BASE_URL}/videos`,
-  UPLOAD_VIDEO: `${API_BASE_URL}/videos/upload`,
+  PROFILE: `${API_BASE_URL}/auth/profile`,
+  //VIDEOS: `${API_BASE_URL}/videos`,
+  UPLOAD_VIDEO:(id) => `${API_BASE_URL}/patient/${id}/videos/upload`,
+  ADD_NOTE: (session_id) => `${API_BASE_URL}/patients/${session_id}/AddNote`,
   DOCUMENTS: `${API_BASE_URL}/documents`,
 };
 

@@ -23,6 +23,7 @@ import AddVideoScreen from './screens/main/AddVideoScreen';
 // Theme and Config
 import theme from './config/theme';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import AddPatientScreen from './screens/main/AddPatientScreen';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -93,6 +94,11 @@ const AppNavigator = () => {
               name="AddVideo" 
               component={AddVideoScreen}
               options={{ headerShown: true, title: 'Add New Video' }}
+            />
+            <Stack.Screen 
+              name="AddPatient" 
+              component={AddPatientScreen}
+              options={{ headerShown: true, title: 'Add Patients' }}
             />
           </>
         )}

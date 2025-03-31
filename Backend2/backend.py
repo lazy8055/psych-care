@@ -2,15 +2,16 @@
 from flask import Flask, jsonify, request
 from flask_pymongo import PyMongo
 from flask_bcrypt import Bcrypt
-from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
+from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity, create_refresh_token
 from werkzeug.security import generate_password_hash, check_password_hash
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 import os
 from dotenv import load_dotenv
 import boto3
 from boto3.exceptions import Boto3Error
 import uuid
 import logging
+from bson import ObjectId
 
 # Load environment variables
 load_dotenv()
@@ -21,6 +22,7 @@ app = Flask(__name__)
 app.config['MONGO_URI'] = os.getenv('MONGO_URI')
 app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY')
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=1)
+app.config["JWT_REFRESH_TOKEN_EXPIRES"] = timedelta(days=7)
 app.config['AWS_ACCESS_KEY_ID'] = os.getenv('AWS_ACCESS_KEY_ID')
 app.config['AWS_SECRET_ACCESS_KEY'] = os.getenv('AWS_SECRET_ACCESS_KEY')
 app.config['AWS_REGION'] = os.getenv('AWS_REGION')
@@ -52,7 +54,7 @@ def upload_file_to_s3(file, folder):
             app.config['S3_BUCKET'],
             filename,
             ExtraArgs={
-                'ACL': 'public-read',
+                #'ACL': 'public-read',
                 'ContentType': file.content_type
             }
         )
@@ -143,6 +145,7 @@ def login():
         return jsonify({'success': False, 'message': 'Invalid credentials'}), 401
     
     access_token = create_access_token(identity=str(user['_id']))
+    refresh_token = create_refresh_token(identity=str(user['_id']))
     
     return jsonify({
         'success': True,
@@ -159,8 +162,8 @@ def login():
 @jwt_required()
 def get_profile():
     user_id = get_jwt_identity()
-    user = mongo.db.users.find_one({'_id': user_id})
-    
+    user = mongo.db.users.find_one({'_id': ObjectId(user_id) })
+    print(user_id)
     if not user:
         return jsonify({'success': False, 'message': 'User not found'}), 404
     
@@ -194,14 +197,14 @@ def update_profile():
     update_data = {k: v for k, v in update_data.items() if v is not None}
     
     result = mongo.db.users.update_one(
-        {'_id': user_id},
+        {'_id': ObjectId(user_id)},
         {'$set': update_data}
     )
     
     if result.modified_count == 0:
         return jsonify({'success': False, 'message': 'No changes made'}), 400
-    
-    updated_user = mongo.db.users.find_one({'_id': user_id})
+    print("data")
+    updated_user = mongo.db.users.find_one({'_id': ObjectId(user_id)})
     updated_user['_id'] = str(updated_user['_id'])
     updated_user.pop('password', None)
     
@@ -211,10 +214,10 @@ def update_profile():
 @jwt_required()
 def get_patients():
     user_id = get_jwt_identity()
-    status = request.args.get('status', 'Current')
+    status = request.args.get('status', '')
     search = request.args.get('search', '')
     
-    query = {'therapistId': user_id, 'status': status}
+    query = {'therapistId': ObjectId(user_id)}
     
     if search:
         query['$or'] = [
@@ -227,6 +230,7 @@ def get_patients():
     for patient in patients:
         patient['_id'] = str(patient['_id'])
         patient['therapistId'] = str(patient['therapistId'])
+        patient["lastVisit"] = patient["lastVisit"].strftime("%Y-%m-%d")
     
     return jsonify({'success': True, 'patients': patients})
 
@@ -242,7 +246,7 @@ def create_patient():
             return jsonify({'success': False, 'message': f'{field} is required'}), 400
     
     patient = {
-        'therapistId': user_id,
+        'therapistId': ObjectId(user_id),
         'name': data['name'],
         'age': data['age'],
         'gender': data['gender'],
@@ -258,10 +262,12 @@ def create_patient():
         'treatmentPlan': data.get('treatmentPlan', ''),
         'medications': data.get('medications', ''),
         'lifestyle': data.get('lifestyle', ''),
+        'dianosis': data.get('lifestyle', ''),
         'emergencyContact': data.get('emergencyContact', {}),
         'documents': data.get('documents', []),
         'createdAt': datetime.utcnow(),
-        'updatedAt': datetime.utcnow()
+        'updatedAt': datetime.utcnow(),
+        'lastVisit': datetime(1970, 1, 1),
     }
     
     result = mongo.db.patients.insert_one(patient)
@@ -276,8 +282,8 @@ def get_patient(patient_id):
     user_id = get_jwt_identity()
     
     patient = mongo.db.patients.find_one({
-        '_id': patient_id,
-        'therapistId': user_id
+        '_id': ObjectId(patient_id),
+        'therapistId': ObjectId(user_id)
     })
     
     if not patient:
@@ -287,6 +293,76 @@ def get_patient(patient_id):
     patient['therapistId'] = str(patient['therapistId'])
     
     return jsonify({'success': True, 'patient': patient})
+'''
+
+# Added by lazy
+@app.route('patients', methods=['POST'])
+@jwt_required()
+def create_patient():
+    # Get the current therapist's ID from JWT
+    therapist_id = get_jwt_identity()
+    
+    # Get data from request
+    data = request.get_json()
+    
+    # Validate required fields
+    required_fields = ['name', 'age', 'gender', 'status']
+    for field in required_fields:
+        if field not in data:
+            return jsonify({
+                'success': False,
+                'message': f'{field} is required'
+            }), 400
+    
+    # Create patient document
+    patient = {
+        'therapistId': ObjectId(therapist_id),
+        'name': data['name'],
+        'age': data['age'],
+        'gender': data['gender'],
+        'status': data['status'],
+        'image': data.get('image', 'https://via.placeholder.com/150'),
+        'contactDetails': {
+            'phone': data.get('contactDetails', {}).get('phone', ''),
+            'email': data.get('contactDetails', {}).get('email', '')
+        },
+        'address': data.get('address', ''),
+        'medicalHistory': data.get('medicalHistory', ''),
+        'familyHistory': data.get('familyHistory', ''),
+        'presentingProblem': data.get('presentingProblem', ''),
+        'clinicalObservations': data.get('clinicalObservations', ''),
+        'assessment': data.get('assessment', ''),
+        'treatmentPlan': data.get('treatmentPlan', ''),
+        'medications': data.get('medications', ''),
+        'lifestyle': data.get('lifestyle', ''),
+        'emergencyContact': {
+            'name': data.get('emergencyContact', {}).get('name', ''),
+            'phone': data.get('emergencyContact', {}).get('phone', ''),
+            'relationship': data.get('emergencyContact', {}).get('relationship', '')
+        },
+        'sessions': [],
+        'documents': [],
+        'createdAt': datetime.utcnow(),
+        'updatedAt': datetime.utcnow()
+    }
+    
+    try:
+        # Insert into database
+        result = mongo.db.patients.insert_one(patient)
+        patient['_id'] = str(result.inserted_id)
+        
+        return jsonify({
+            'success': True,
+            'patient': patient
+        }), 201
+    except Exception as e:
+        logger.error(f"Error creating patient: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': 'Failed to create patient'
+        }), 500
+'''
+
 
 @app.route('/patients/<patient_id>', methods=['PUT'])
 @jwt_required()
@@ -318,7 +394,7 @@ def update_patient(patient_id):
     update_data = {k: v for k, v in update_data.items() if v is not None}
     
     result = mongo.db.patients.update_one(
-        {'_id': patient_id, 'therapistId': user_id},
+        {'_id': ObjectId(patient_id), 'therapistId': ObjectId(user_id)},
         {'$set': update_data}
     )
     
@@ -337,8 +413,8 @@ def delete_patient(patient_id):
     user_id = get_jwt_identity()
     
     result = mongo.db.patients.delete_one({
-        '_id': patient_id,
-        'therapistId': user_id
+        '_id': ObjectId(patient_id),
+        'therapistId': ObjectId(user_id)
     })
     
     if result.deleted_count == 0:
@@ -357,8 +433,8 @@ def upload_document(patient_id):
     
     # Check if patient exists and belongs to therapist
     patient = mongo.db.patients.find_one({
-        '_id': patient_id,
-        'therapistId': user_id
+        '_id': ObjectId(patient_id),
+        'therapistId': ObjectId(user_id)
     })
     
     if not patient:
@@ -394,6 +470,7 @@ def upload_document(patient_id):
     
     return jsonify({'success': True, 'document': document}), 201
 
+'''
 @app.route('/patients/<patient_id>/sessions', methods=['GET'])
 @jwt_required()
 def get_sessions(patient_id):
@@ -401,15 +478,15 @@ def get_sessions(patient_id):
     
     # Check if patient exists and belongs to therapist
     patient = mongo.db.patients.find_one({
-        '_id': patient_id,
-        'therapistId': user_id
+        '_id': ObjectId(patient_id),
+        'therapistId': ObjectId(user_id)
     })
     
     if not patient:
         return jsonify({'success': False, 'message': 'Patient not found'}), 404
     
     sessions = list(mongo.db.sessions.find({
-        'patientId': patient_id
+        'patientId': ObjectId(patient_id)
     }))
     
     for session in sessions:
@@ -417,17 +494,17 @@ def get_sessions(patient_id):
         session['patientId'] = str(session['patientId'])
         session['therapistId'] = str(session['therapistId'])
     
-    return jsonify({'success': True, 'sessions': sessions})
+    return jsonify({'success': True, 'sessions': sessions}) '''
 
-@app.route('/patients/<patient_id>/sessions', methods=['POST'])
+@app.route('/patient/<patient_id>/videos/upload', methods=['POST'])
 @jwt_required()
 def create_session(patient_id):
     user_id = get_jwt_identity()
     
     # Check if patient exists and belongs to therapist
     patient = mongo.db.patients.find_one({
-        '_id': patient_id,
-        'therapistId': user_id
+        '_id': ObjectId(patient_id),
+        'therapistId': ObjectId(user_id)
     })
     
     if not patient:
@@ -458,8 +535,7 @@ def create_session(patient_id):
     
     # Create session record
     session = {
-        'patientId': patient_id,
-        'therapistId': user_id,
+        '_id': ObjectId(),  # Unique ID for the session
         'title': data['title'],
         'date': data['date'],
         'duration': data['duration'],
@@ -469,13 +545,50 @@ def create_session(patient_id):
         'createdAt': datetime.utcnow(),
         'updatedAt': datetime.utcnow()
     }
+
+    # Ensure patient has a sessions list
+    if 'sessions' not in patient or not isinstance(patient['sessions'], list):
+        patient['sessions'] = []
     
-    result = mongo.db.sessions.insert_one(session)
-    session['_id'] = str(result.inserted_id)
-    session['patientId'] = str(session['patientId'])
-    session['therapistId'] = str(session['therapistId'])
-    
+    # Append the new session
+    mongo.db.patients.update_one(
+        {'_id': ObjectId(patient_id)},
+        {'$push': {'sessions': session}, '$set': {'updatedAt': datetime.utcnow()}}
+    )
+
+    # Convert session ID to string for JSON response
+    session['_id'] = str(session['_id'])
+
     return jsonify({'success': True, 'session': session}), 201
+
+
+@app.route("/patients/<session_id>/AddNote", methods=["POST"])
+def add_note(session_id):
+    try:
+        data = request.json  # Get JSON data from request
+
+        # Create a new note structure
+        new_note = {
+            "id": data["id"],
+            "text": data["text"],
+            "timestamp": data["timestamp"],
+            "createdAt": data["createdAt"]
+        }
+
+        # Find the patient and update the session with the new note
+        result = mongo.db.patients.update_one(
+            {"sessions._id": ObjectId(session_id)},
+            {"$push": {"sessions.$.notes": new_note}}
+        )
+
+        if result.modified_count == 1:
+            return jsonify({"success": True, "message": "Note added successfully"}), 200
+        else:
+            return jsonify({"success": False, "message": "Session not found"}), 404
+
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
+'''
 
 @app.route('/sessions/<session_id>', methods=['GET'])
 @jwt_required()
@@ -573,6 +686,8 @@ def get_appointments():
     
     return jsonify({'success': True, 'appointments': appointments})
 
+'''
+
 @app.route('/appointments', methods=['POST'])
 @jwt_required()
 def create_appointment():
@@ -654,4 +769,6 @@ def chat():
     return jsonify({'success': True, 'response': response})
 
 if __name__ == '__main__':
+    print(app.url_map)
+
     app.run(host="0.0.0.0", port=5000, debug=True)

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { View, StyleSheet, TouchableOpacity, Dimensions, Image, Animated, Linking } from "react-native"
 import {
   Text,
@@ -21,10 +21,14 @@ import { Ionicons } from "@expo/vector-icons"
 import { useNavigation, useRoute } from "@react-navigation/native"
 import theme from "../../config/theme"
 import { useAuth } from "../../context/AuthContext"
+import API_ENDPOINTS from "../../config/api"
+import { useFocusEffect } from "@react-navigation/native";
 
 const { width } = Dimensions.get("window")
 
 const PatientDetailScreen = () => {
+ 
+  const [sessionsArray, setSession] = useState(null)
   const [patient, setPatient] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -38,22 +42,22 @@ const PatientDetailScreen = () => {
 
   // Animation values
   const scrollY = useRef(new Animated.Value(0)).current
-  const headerHeight = 250
+  const headerHeight = 30
   const headerFade = scrollY.interpolate({
-    inputRange: [0, headerHeight - 100],
+    inputRange: [0, headerHeight*2],
     outputRange: [1, 0],
     extrapolate: "clamp",
   })
 
   const headerTranslate = scrollY.interpolate({
-    inputRange: [0, headerHeight],
+    inputRange: [0, 200],
     outputRange: [0, -headerHeight],
     extrapolate: "clamp",
   })
 
   const contentTranslate = scrollY.interpolate({
     inputRange: [0, headerHeight],
-    outputRange: [headerHeight, 0],
+    outputRange: [headerHeight, headerHeight],
     extrapolate: "clamp",
   })
 
@@ -61,18 +65,26 @@ const PatientDetailScreen = () => {
     fetchPatientDetails()
   }, [patientId])
 
+  useFocusEffect(
+    useCallback(() => {
+      fetchPatientDetails() // Reload patient data on every visit
+    }, [patientId])
+  );
+
   const fetchPatientDetails = async () => {
     setIsLoading(true)
     setError(null)
+    console.log(API_ENDPOINTS.UPLOAD_VIDEO(patientId));
 
     try {
       // In a real app, you would fetch from your API
-      // const response = await fetch(API_ENDPOINTS.PATIENT_DETAIL(patientId), {
-      //   headers: {
-      //     'Authorization': `Bearer ${token}`
-      //   }
-      // });
-      // const data = await response.json();
+       const response = await fetch(API_ENDPOINTS.PATIENT_DETAIL(patientId), {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+          'Authorization': `Bearer ${token}`
+         }
+       });
+       const data = await response.json();
 
       // For demo purposes, using mock data
       const mockPatient = {
@@ -155,12 +167,21 @@ const PatientDetailScreen = () => {
           },
         ],
       }
-
+      console.log(data)
       // Simulate network delay
+      
+      
       setTimeout(() => {
-        setPatient(mockPatient)
-        setIsLoading(false)
-      }, 1000)
+        setPatient(data.patient);
+        setIsLoading(false);
+      
+        setTimeout(() => {
+          setSession(data.patient.sessions);  // Use `data.patient`, not `patient`
+        }, 1000);
+      
+      }, 1000);
+      
+      
     } catch (err) {
       console.error("Error fetching patient details:", err)
       setError("Failed to load patient details. Please try again.")
@@ -177,7 +198,7 @@ const PatientDetailScreen = () => {
   }
 
   const handleVideoPress = (session) => {
-    navigation.navigate("VideoPlayer", { session })
+   navigation.navigate("VideoPlayer", { session })
   }
 
   const handleAddVideo = () => {
@@ -354,7 +375,7 @@ const PatientDetailScreen = () => {
     <View style={styles.tabContent}>
       <Title style={styles.sessionsTitle}>Session Videos</Title>
 
-      {patient.sessions.map((session) => (
+      {sessionsArray.map((session) => (
         <Card key={session.id} style={styles.sessionCard} onPress={() => handleVideoPress(session)}>
           <Card.Cover source={{ uri: session.thumbnailUrl }} style={styles.sessionThumbnail} />
           <View style={styles.playIconContainer}>
@@ -364,19 +385,19 @@ const PatientDetailScreen = () => {
             <Title style={styles.sessionTitle}>{session.title}</Title>
             <View style={styles.sessionMeta}>
               <Chip icon="calendar" style={styles.sessionChip}>
-                {session.date}
+              {new Date(session.date.$date).toLocaleString()}
               </Chip>
               <Chip icon="clock" style={styles.sessionChip}>
                 {session.duration}
               </Chip>
             </View>
-            <Paragraph style={styles.sessionNotes}>{session.notes}</Paragraph>
+            
           </Card.Content>
         </Card>
       ))}
     </View>
   )
-
+// <Paragraph style={styles.sessionNotes}>{session.notes}</Paragraph>
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
@@ -404,8 +425,7 @@ const PatientDetailScreen = () => {
         style={[
           styles.header,
           {
-            transform: [{ translateY: headerTranslate }],
-            opacity: headerFade,
+            
           },
         ]}
       >
@@ -414,7 +434,7 @@ const PatientDetailScreen = () => {
           style={styles.coverImage}
           defaultSource={require("../../assets/default-avatar.png")}
         />
-        <View style={styles.headerOverlay} />
+      <View style={styles.headerOverlay} />
         <View style={styles.patientInfoHeader}>
           <Title style={styles.patientName}>{patient.name}</Title>
           <View style={styles.patientMetaContainer}>

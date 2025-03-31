@@ -23,6 +23,17 @@ export const AuthProvider = ({ children }) => {
           setToken(storedToken);
           setUser(JSON.parse(storedUser));
           setIsAuthenticated(true);
+
+           function isTokenExpired(token) {
+              if(token == null) return true
+              const payload = JSON.parse(atob(token.split('.')[1])); // Decode JWT payload
+              return payload.exp * 1000 < Date.now(); // Compare expiration with current time
+            }
+                  
+            if (isTokenExpired(storedToken)) {
+              console.error("Token has expired. Please log in again.");
+              logout();
+            }
         }
       } catch (error) {
         console.error('Error checking login status:', error);

@@ -141,35 +141,35 @@ const AddVideoScreen = () => {
       }, 500);
       
       // In a real app, you would upload the video to your server
-      // const formData = new FormData();
-      // formData.append('patientId', patientId);
-      // formData.append('title', videoData.title);
-      // formData.append('date', videoData.date);
-      // formData.append('duration', videoData.duration);
-      // formData.append('notes', videoData.notes);
-      // formData.append('video', {
-      //   uri: videoData.videoUri,
-      //   name: 'video.mp4',
-      //   type: 'video/mp4',
-      // });
-      // if (videoData.thumbnailUri) {
-      //   formData.append('thumbnail', {
-      //     uri: videoData.thumbnailUri,
-      //     name: 'thumbnail.jpg',
-      //     type: 'image/jpeg',
-      //   });
-      // }
+       const formData = new FormData();
+       formData.append('patientId', patientId);
+       formData.append('title', videoData.title);
+       formData.append('date', videoData.date);
+       formData.append('duration', videoData.duration);
+       formData.append('notes', videoData.notes);
+       formData.append('video', {
+         uri: videoData.videoUri,
+         name: 'video.mp4',
+         type: 'video/mp4',
+       });
+   if (videoData.thumbnailUri) {
+         formData.append('thumbnail', {
+           uri: videoData.thumbnailUri,
+           name: 'thumbnail.jpg',
+           type: 'image/jpeg',
+         });
+       }
       
-      // const response = await fetch(API_ENDPOINTS.UPLOAD_VIDEO, {
-      //   method: 'POST',
-      //   headers: {
-      //     'Content-Type': 'multipart/form-data',
-      //     'Authorization': `Bearer ${token}`,
-      //   },
-      //   body: formData,
-      // });
+       const response = await fetch(API_ENDPOINTS.UPLOAD_VIDEO(patientId), {
+         method: 'POST',
+         headers: {
+
+           'Authorization': `Bearer ${token}`,
+         },
+         body: formData,
+       });
       
-      // const data = await response.json();
+       const data = await response.json();
       
       // Simulate network delay
       setTimeout(() => {
@@ -190,7 +190,7 @@ const AddVideoScreen = () => {
           );
         }, 500);
       }, 5000);
-      
+      console.log("temp");
     } catch (error) {
       console.error('Error uploading video:', error);
       setIsUploading(false);

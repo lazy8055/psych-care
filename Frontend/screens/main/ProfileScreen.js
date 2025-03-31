@@ -31,18 +31,9 @@ import API_ENDPOINTS from '../../config/api';
 import { useAuth } from '../../context/AuthContext';
 
 const ProfileScreen = () => {
-  const { user, logout, updateProfile } = useAuth();
+  const { user, logout, updateProfile, token } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [profileData, setProfileData] = useState({
-    fullName: 'Dr. Sarah Johnson',
-    username: 'dr.sarah',
-    email: 'sarah.johnson@example.com',
-    phone: '+1 (555) 987-6543',
-    specialization: 'Clinical Psychology',
-    licenseNumber: 'PSY12345',
-    experience: '15 years',
-    bio: 'Experienced clinical psychologist specializing in anxiety disorders, depression, and trauma. I use evidence-based approaches including CBT, ACT, and EMDR to help clients achieve meaningful change.',
-    clinicAddress: '123 Healing Way, Suite 300, San Francisco, CA 94110',
     profileImage: 'https://via.placeholder.com/300',
   });
   const [editedData, setEditedData] = useState({});
@@ -60,28 +51,49 @@ const ProfileScreen = () => {
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
-        duration: 800,
+        duration: 500,
         useNativeDriver: true,
       }),
       Animated.timing(translateAnim, {
         toValue: 0,
-        duration: 800,
+        duration: 500,
         useNativeDriver: true,
       })
     ]).start();
     
-    // In a real app, you would fetch the user profile from your API
-    // and update the profileData state
+   
     
-    // If user data is available from auth context, use it
-    if (user) {
-      // setProfileData({
-      //   ...profileData,
-      //   fullName: user.fullName,
-      //   email: user.email,
-      //   // ... other fields
-      // });
-    }
+    // Completed
+    const fetchProfile = async () => {
+      try {
+          
+          
+         
+        
+          // API call to get user profile
+          const response = await fetch(API_ENDPOINTS.PROFILE, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',
+            },
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to fetch profile');
+        }
+
+        const data = await response.json();
+        setProfileData(data.user);
+      } catch (err) {
+          console.error('Error fetching profile:', err);
+          setError('Failed to load profile');
+      } finally {
+          setLoading(false);
+      }
+  };
+
+  fetchProfile();
   }, []);
   
   useEffect(() => {
@@ -115,22 +127,36 @@ const ProfileScreen = () => {
   
   const handleSaveProfile = async () => {
     if (!validateForm()) return;
-    
+
     try {
-      // In a real app, you would call your API to update the profile
-      // const result = await updateProfile(editedData);
-      
-      // For demo purposes, just update the local state
-      setProfileData(editedData);
-      setIsEditing(false);
-      setErrors({});
-      
-      Alert.alert('Success', 'Profile updated successfully');
+        
+
+        const response = await fetch(`${API_ENDPOINTS.PROFILE}`, {
+            method: 'PUT',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(editedData),
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+            throw new Error(result.message || 'Failed to update profile');
+        }
+
+        setProfileData(result.user);  // Update local state with new profile data
+        setIsEditing(false);
+        setErrors({});
+
+        Alert.alert('Success', 'Profile updated successfully');
     } catch (error) {
-      console.error('Error updating profile:', error);
-      Alert.alert('Error', 'Failed to update profile. Please try again.');
+        console.error('Error updating profile:', error);
+        Alert.alert('Error', error.message || 'Failed to update profile. Please try again.');
     }
-  };
+};
+
   
   const handleLogout = () => {
     setShowLogoutDialog(false);
@@ -173,8 +199,7 @@ const ProfileScreen = () => {
       style={[
         styles.profileHeader,
         {
-          opacity: fadeAnim,
-          transform: [{ translateY: translateAnim }]
+          
         }
       ]}
     >

@@ -23,6 +23,8 @@ import { Video } from 'expo-av';
 import { Ionicons } from '@expo/vector-icons';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import theme from '../../config/theme';
+import API_ENDPOINTS from "../../config/api"
+import { useAuth } from "../../context/AuthContext"
 
 const { width, height } = Dimensions.get('window');
 
@@ -38,10 +40,11 @@ const VideoPlayerScreen = () => {
   const route = useRoute();
   const navigation = useNavigation();
   const { session } = route.params;
+  const { token } = useAuth()
   
   useEffect(() => {
     // Mock notes data
-    setNotes([
+   /* setNotes([
       {
         id: 'n1',
         text: 'Patient shows significant improvement in anxiety symptoms compared to last session.',
@@ -60,7 +63,8 @@ const VideoPlayerScreen = () => {
         timestamp: 450, // 7.5 minutes
         createdAt: '2023-05-15T09:22:00Z',
       },
-    ]);
+    ]); */
+    setNotes(session.notes)
     
     // Set up status bar for fullscreen mode
     if (isFullscreen) {
@@ -129,7 +133,7 @@ const VideoPlayerScreen = () => {
     return `${minutes}:${remainingSeconds < 10 ? '0' : ''}${remainingSeconds}`;
   };
   
-  const handleAddNote = () => {
+  const handleAddNote = async () => {
     if (!note.trim()) return;
     
     const newNote = {
@@ -138,9 +142,28 @@ const VideoPlayerScreen = () => {
       timestamp: currentTime,
       createdAt: new Date().toISOString(),
     };
-    
-    setNotes(prev => [...prev, newNote]);
-    setNote('');
+    try {
+      console.log(session)
+      const response = await fetch(API_ENDPOINTS.ADD_NOTE(session._id.$oid), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+        body: JSON.stringify(newNote),
+      });
+  
+      const data = await response.json();
+  
+      if (data.success) {
+        setNotes((prev) => [...prev, newNote]);
+        setNote(""); // Clear input field
+      } else {
+        console.error("Error adding note:", data.message);
+      }
+    } catch (error) {
+      console.error("Network error:", error);
+    }
   };
   
   const handleNoteTimestampClick = (timestamp) => {
@@ -158,13 +181,18 @@ const VideoPlayerScreen = () => {
         <Video
           ref={videoRef}
           style={[styles.video, isFullscreen && styles.fullscreenVideo]}
-          source={{ uri: session.videoUrl || 'http://d23dyxeqlo5psv.cloudfront.net/big_buck_bunny.mp4' }}
+          source={{ uri: 'https://youtu.be/DLiS6aFOlh0?si=5URP9bTayTnbHifd' }}
+          //source={{ uri: session.videoUrl || 'http://d23dyxeqlo5psv.cloudfront.net/big_buck_bunny.mp4' }} 
           useNativeControls={false}
           resizeMode="contain"
           isLooping={false}
           onPlaybackStatusUpdate={handlePlaybackStatusUpdate}
+          // New props for expo-video
+          allowsFullscreen={false} // We'll handle fullscreen ourselves
+          showsTimecodes={false}
         />
         
+        {/* Rest of your controls code remains the same */}
         {showControls && (
           <View style={styles.controls}>
             <View style={styles.topControls}>
@@ -249,7 +277,7 @@ const VideoPlayerScreen = () => {
         <Chip icon="clock" style={styles.sessionChip}>{session.duration}</Chip>
       </View>
       <Divider style={styles.divider} />
-      <Paragraph style={styles.sessionNotes}>{session.notes}</Paragraph>
+     
     </Surface>
   );
   

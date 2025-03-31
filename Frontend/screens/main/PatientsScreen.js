@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect,useCallback  } from "react"
 import { View, StyleSheet, FlatList, TouchableOpacity, Dimensions, Animated } from "react-native"
 import {
   Searchbar,
@@ -12,12 +12,15 @@ import {
   ActivityIndicator,
   Text,
   Button,
+  FAB,
   Divider,
 } from "react-native-paper"
 import { useNavigation } from "@react-navigation/native"
 import { Ionicons } from "@expo/vector-icons"
 import theme from "../../config/theme"
+import API_ENDPOINTS from "../../config/api"
 import { useAuth } from "../../context/AuthContext"
+import { useFocusEffect } from "@react-navigation/native";
 
 
 const { width } = Dimensions.get("window")
@@ -58,18 +61,24 @@ const PatientsScreen = () => {
     filterPatients()
   }, [searchQuery, filter, patients])
 
+  useFocusEffect(
+    useCallback(() => {
+      filterPatients(); // Reload patient data on every visit
+    }, [patients])
+  );
+
   const fetchPatients = async () => {
     setIsLoading(true)
     setError(null)
 
     try {
       // In a real app, you would fetch from your API
-      // const response = await fetch(API_ENDPOINTS.PATIENTS, {
-      //   headers: {
-      //     'Authorization': `Bearer ${token}`
-      //   }
-      // });
-      // const data = await response.json();
+       const response = await fetch(API_ENDPOINTS.PATIENTS, {
+         headers: {
+           'Authorization': `Bearer ${token}`
+         }
+       });
+       const data = await response.json();
 
       // For demo purposes, using mock data
       const mockPatients = [
@@ -134,8 +143,16 @@ const PatientsScreen = () => {
           diagnosis: "OCD",
         },
       ]
+      console.log(data) 
+  
+ 
+    if(data == null) renderEmptyList()
+    else{
+      const patientArray = Object.values(data.patients);
+      setPatients(patientArray);
+    }
 
-      setPatients(mockPatients)
+      
     } catch (err) {
       console.error("Error fetching patients:", err)
       setError("Failed to load patients. Please try again.")
@@ -162,8 +179,8 @@ const PatientsScreen = () => {
     setFilteredPatients(filtered)
   }
 
-  const handlePatientPress = (patient) => {
-    navigation.navigate("PatientDetail", { patientId: patient.id })
+  const handlePatientPress = (patientId) => {
+    navigation.navigate("PatientDetail", { patientId: patientId })
   }
 
   const handleFilterChange = (newFilter) => {
@@ -197,8 +214,8 @@ const PatientsScreen = () => {
           transform: [{ translateY: itemTranslateAnim }],
         }}
       >
-        <TouchableOpacity onPress={() => handlePatientPress(item)} activeOpacity={0.7}>
-          <Card style={styles.card}>
+        <TouchableOpacity onPress={() => handlePatientPress(item._id)} activeOpacity={0.7}>
+          <Card style={styles.card} key={item.id}>
             <Card.Content style={styles.cardContent}>
               <Avatar.Image
                 source={{ uri: item.image }}
@@ -207,6 +224,7 @@ const PatientsScreen = () => {
                 // Fallback in case image fails to load
                 onError={() => console.log(`Failed to load image for ${item.name}`)}
               />
+              {console.log(`${item._id}`)}
               <View style={styles.patientInfo}>
                 <Title>{item.name}</Title>
                 <Paragraph>
@@ -216,7 +234,8 @@ const PatientsScreen = () => {
                   <Chip mode="outlined" style={styles.diagnosisChip} textStyle={{ fontSize: 12 }}>
                     {item.diagnosis}
                   </Chip>
-                  <Text style={styles.lastVisit}>{"\n"} Last visit: {item.lastVisit}</Text>
+                  <Text style={styles.lastVisit}>{"\n"} Last visit: {item.lastVisit=='1970-01-01'?'Not Yet': item.lastVisit}</Text>
+                  
                 </View>
               </View>
               <Ionicons name="chevron-forward" size={24} color={theme.colors.primary} style={styles.arrowIcon} />
@@ -234,6 +253,7 @@ const PatientsScreen = () => {
       <Text style={styles.emptySubtext}>
         {searchQuery ? "Try adjusting your search" : `You don't have any ${filter.toLowerCase()} patients`}
       </Text>
+      
     </View>
   )
 
@@ -286,8 +306,11 @@ const PatientsScreen = () => {
           contentContainerStyle={styles.listContent}
           ListEmptyComponent={renderEmptyList}
           showsVerticalScrollIndicator={false}
+          
         />
       )}
+      
+    <FAB style={styles.fab} icon="plus" label="Add Patients" onPress={() => navigation.navigate('AddPatient')} />
     </View>
   )
 }
@@ -412,6 +435,13 @@ const styles = StyleSheet.create({
     marginTop: 8,
     textAlign: "center",
     color: theme.colors.placeholder,
+  },
+  fab: {
+    position: "absolute",
+    margin: 16,
+    right: 0,
+    bottom: 0,
+    backgroundColor: theme.colors.primary,
   },
 })
 
