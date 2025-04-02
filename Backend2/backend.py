@@ -28,6 +28,7 @@ app.config['AWS_ACCESS_KEY_ID'] = os.getenv('AWS_ACCESS_KEY_ID')
 app.config['AWS_SECRET_ACCESS_KEY'] = os.getenv('AWS_SECRET_ACCESS_KEY')
 app.config['AWS_REGION'] = os.getenv('AWS_REGION')
 app.config['S3_BUCKET'] = os.getenv('S3_BUCKET')
+app.config['GEMINI_API_KEY'] = os.getenv('GEMINI_API_KEY')
 
 # Initialize extensions
 mongo = PyMongo(app)
@@ -741,8 +742,8 @@ def chat():
     
     user_message = data['message'].lower()
     
-    API_KEY = "AIzaSyAoRwhSudGxwiPUWd0Su0DVGjbpanVy30E"
-    URL = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={API_KEY}"
+    
+    URL = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={GEMINI_API_KEY}"
 
     # Request payload
     datasend = {
