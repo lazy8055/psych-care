@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { View, StyleSheet, FlatList, TouchableOpacity, Dimensions, Animated, ScrollView, Modal } from "react-native"
+import { View, StyleSheet, FlatList, TouchableOpacity, Dimensions, Animated, ScrollView, Modal } from "react-native" 
 import {
   Text,
   Title,
@@ -23,6 +23,7 @@ import { useNavigation } from "@react-navigation/native"
 import { Ionicons } from "@expo/vector-icons"
 import theme from "../../config/theme"
 import { useAuth } from "../../context/AuthContext"
+import API_ENDPOINTS from '../../config/api';
 
 const { width } = Dimensions.get("window")
 
@@ -107,12 +108,12 @@ const CalendarScreen = () => {
 
     try {
       // In a real app, you would fetch from your API
-      // const response = await fetch(API_ENDPOINTS.APPOINTMENTS, {
-      //   headers: {
-      //     'Authorization': `Bearer ${token}`
-      //   }
-      // });
-      // const data = await response.json();
+      const response = await fetch(API_ENDPOINTS.APPOINTMENTS, {
+        headers: {
+           'Authorization': `Bearer ${token}`
+         }
+       });
+       const data = await response.json();
 
       // For demo purposes, using mock data
       const mockAppointments = [
@@ -145,7 +146,7 @@ const CalendarScreen = () => {
           patientId: "4",
           patientName: "Emily Davis",
           patientImage: "https://randomuser.me/api/portraits/women/28.jpg",
-          date: "2023-05-16",
+          date: "2025-05-16",
           time: "10:00 AM",
           duration: "50 minutes",
           type: "Therapy Session",
@@ -157,7 +158,7 @@ const CalendarScreen = () => {
           patientId: "6",
           patientName: "Sarah Brown",
           patientImage: "https://randomuser.me/api/portraits/women/65.jpg",
-          date: "2023-05-17",
+          date: "2025-05-17",
           time: "02:00 PM",
           duration: "50 minutes",
           type: "Therapy Session",
@@ -169,7 +170,7 @@ const CalendarScreen = () => {
           patientId: "1",
           patientName: "John Doe",
           patientImage: "https://randomuser.me/api/portraits/men/32.jpg",
-          date: "2023-05-22",
+          date: "2025-05-22",
           time: "09:00 AM",
           duration: "50 minutes",
           type: "Therapy Session",
@@ -177,8 +178,9 @@ const CalendarScreen = () => {
           notes: "Continue anxiety management techniques",
         },
       ]
+      
 
-      setAppointments(mockAppointments)
+      setAppointments(data.appointments)
 
       // Create marked dates for calendar
       const marked = {}
@@ -387,9 +389,7 @@ const CalendarScreen = () => {
                 >
                   View Patient
                 </Button>
-                <Button mode="outlined" compact style={styles.actionButton} onPress={() => console.log("Reschedule")}>
-                  Reschedule
-                </Button>
+               
               </View>
             </Card.Content>
           </Card>
@@ -645,24 +645,24 @@ const styles = StyleSheet.create({
   },
   appointmentType: {
     marginTop: 4,
-    height: 24,
+    height: 35,
     backgroundColor: `${theme.colors.primary}10`,
   },
   timeContainer: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: `${theme.colors.primary}10`,
-    paddingHorizontal: 10,
+    paddingHorizontal: 0,
     paddingVertical: 5,
     borderRadius: 16,
   },
   timeText: {
-    marginLeft: 4,
+    marginLeft: 0,
     fontWeight: "bold",
     color: theme.colors.primary,
   },
   durationText: {
-    marginLeft: 4,
+    marginLeft: 0,
     fontSize: 12,
     color: theme.colors.placeholder,
   },

@@ -14,6 +14,7 @@ import {
 import { Text, TextInput, Avatar, Surface, Title, Divider } from "react-native-paper"
 import theme from "../../config/theme"
 import { useAuth } from "../../context/AuthContext"
+import API_ENDPOINTS from '../../config/api';
 
 const { width, height } = Dimensions.get("window")
 
@@ -24,7 +25,7 @@ const ChatbotScreen = () => {
   const [keyboardVisible, setKeyboardVisible] = useState(false)
   const flatListRef = useRef(null)
   const inputRef = useRef(null)
-  const { user } = useAuth()
+  const { token } = useAuth()
 
   // Animation values
   const fadeAnim = new Animated.Value(0)
@@ -102,15 +103,15 @@ const ChatbotScreen = () => {
 
     try {
       // In a real app, you would call your API
-      // const response = await fetch(API_ENDPOINTS.CHAT, {
-      //   method: 'POST',
-      //   headers: {
-      //     'Content-Type': 'application/json',
-      //     'Authorization': `Bearer ${token}`
-      //   },
-      //   body: JSON.stringify({ message: userMessage.text }),
-      // });
-      // const data = await response.json();
+       const response = await fetch(API_ENDPOINTS.CHAT, {
+         method: 'POST',
+         headers: {
+          'Content-Type': 'application/json',
+       'Authorization': `Bearer ${token}`
+         },
+         body: JSON.stringify({ message: userMessage.text }),
+       });
+      const data = await response.json();
 
       // Simulate API delay
       setTimeout(() => {
@@ -133,10 +134,10 @@ const ChatbotScreen = () => {
         } else if (currentText.toLowerCase().includes("thank")) {
           botResponse = "You're welcome! Is there anything else I can help you with?"
         }
-
+        console.log(data)
         const botMessage = {
           id: (Date.now() + 1).toString(),
-          text: botResponse,
+          text: data.response,
           sender: "bot",
           timestamp: new Date(),
         }

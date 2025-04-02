@@ -25,6 +25,7 @@ import { useRoute, useNavigation } from '@react-navigation/native';
 import theme from '../../config/theme';
 import API_ENDPOINTS from "../../config/api"
 import { useAuth } from "../../context/AuthContext"
+//import Video from '@expo/video';
 
 const { width, height } = Dimensions.get('window');
 
@@ -181,18 +182,15 @@ const VideoPlayerScreen = () => {
         <Video
           ref={videoRef}
           style={[styles.video, isFullscreen && styles.fullscreenVideo]}
-          source={{ uri: 'https://youtu.be/DLiS6aFOlh0?si=5URP9bTayTnbHifd' }}
-          //source={{ uri: session.videoUrl || 'http://d23dyxeqlo5psv.cloudfront.net/big_buck_bunny.mp4' }} 
-          useNativeControls={false}
+          source={{ uri: session.videoUrl }}
           resizeMode="contain"
           isLooping={false}
           onPlaybackStatusUpdate={handlePlaybackStatusUpdate}
-          // New props for expo-video
-          allowsFullscreen={false} // We'll handle fullscreen ourselves
-          showsTimecodes={false}
+          allowsFullscreen={false}
+          useNativeControls={false}
         />
         
-        {/* Rest of your controls code remains the same */}
+        {/* Controls remain the same */}
         {showControls && (
           <View style={styles.controls}>
             <View style={styles.topControls}>
@@ -224,7 +222,7 @@ const VideoPlayerScreen = () => {
                 size={36}
                 onPress={() => {
                   const newPosition = Math.max(0, (currentTime - 10) * 1000);
-                  videoRef.current.setPositionAsync(newPosition);
+                  videoRef.current?.setPositionAsync(newPosition);
                 }}
               />
               <IconButton
@@ -242,7 +240,7 @@ const VideoPlayerScreen = () => {
                     status.durationMillis || 0,
                     (currentTime + 10) * 1000
                   );
-                  videoRef.current.setPositionAsync(newPosition);
+                  videoRef.current?.setPositionAsync(newPosition);
                 }}
               />
             </View>

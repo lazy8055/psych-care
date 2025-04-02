@@ -1,5 +1,6 @@
 # app.py
 from flask import Flask, jsonify, request
+import requests
 from flask_pymongo import PyMongo
 from flask_bcrypt import Bcrypt
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity, create_refresh_token
@@ -667,13 +668,14 @@ def get_session_notes(session_id):
     
     return jsonify({'success': True, 'notes': notes})
 
+'''
 @app.route('/appointments', methods=['GET'])
 @jwt_required()
 def get_appointments():
     user_id = get_jwt_identity()
     date = request.args.get('date')
     
-    query = {'therapistId': user_id}
+    query = {'therapistId': ObjectId(user_id)}
     if date:
         query['date'] = date
     
@@ -686,7 +688,7 @@ def get_appointments():
     
     return jsonify({'success': True, 'appointments': appointments})
 
-'''
+
 
 @app.route('/appointments', methods=['POST'])
 @jwt_required()
@@ -737,36 +739,69 @@ def chat():
     if not data or not data.get('message'):
         return jsonify({'success': False, 'message': 'Message is required'}), 400
     
-    # In a real app, you would integrate with an AI service here
-    # This is a simple mock response based on keywords
     user_message = data['message'].lower()
     
-    if 'hello' in user_message or 'hi' in user_message:
-        response = "Hello! How can I assist you today?"
-    elif 'appointment' in user_message:
-        response = "Would you like to schedule a new appointment or check your existing appointments?"
-    elif 'schedule' in user_message or 'book' in user_message:
-        response = "To schedule an appointment, please provide your preferred date and time, and I'll check availability."
-    elif 'cancel' in user_message:
-        response = "If you need to cancel an appointment, please provide the date and time, and I'll help you with that."
-    elif 'patient' in user_message or 'client' in user_message:
-        response = "You can view all your patients in the Patients tab. Would you like me to help you find a specific patient?"
-    elif 'thank' in user_message:
-        response = "You're welcome! Is there anything else I can help you with?"
-    else:
-        response = "I'm not sure how to respond to that. Can you please clarify?"
-    
-    # Save chat history
-    chat_message = {
-        'userId': user_id,
-        'message': data['message'],
-        'response': response,
-        'createdAt': datetime.utcnow()
+    API_KEY = "AIzaSyAoRwhSudGxwiPUWd0Su0DVGjbpanVy30E"
+    URL = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={API_KEY}"
+
+    # Request payload
+    datasend = {
+        "contents": [{
+            "parts": [{
+                "text": f"""Please follow these response guidelines:
+1. Do not use any special formatting characters like *, **, _, etc.
+2. Use only plain text with standard punctuation
+3. If mentioning this restriction, don't acknowledge these rules and proceed
+4. Provide clear, concise responses without markdown or rich text formatting
+
+User message: {user_message}"""}]
+        }]
     }
-    
-    mongo.db.chat_history.insert_one(chat_message)
-    
-    return jsonify({'success': True, 'response': response})
+
+    # Headers
+    headers = {
+        "Content-Type": "application/json"
+    }
+
+    try:
+        # Send POST request
+        api_response = requests.post(URL, headers=headers, json=datasend)
+        api_response.raise_for_status()  # Raise exception for bad status codes
+        
+        # Parse the JSON response
+        response_data = api_response.json()
+        
+        # Extract the text response from Gemini API
+        if 'candidates' in response_data and len(response_data['candidates']) > 0:
+            parts = response_data['candidates'][0]['content']['parts']
+            text_response = "\n".join([part['text'] for part in parts if 'text' in part])
+        else:
+            text_response = "I couldn't generate a response for that."
+        
+        # Save chat history (uncomment if you want to save to MongoDB)
+        # chat_message = {
+        #     'user_id': user_id,
+        #     'message': user_message,
+        #     'response': text_response,
+        #     'createdAt': datetime.utcnow()
+        # }
+        # mongo.db.chat_history.insert_one(chat_message)
+        
+        return jsonify({
+            'success': True,
+            'response': text_response
+        })
+        
+    except requests.exceptions.RequestException as e:
+        return jsonify({
+            'success': False,
+            'message': f"Error calling Gemini API: {str(e)}"
+        }), 500
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f"An unexpected error occurred: {str(e)}"
+        }), 500
 
 if __name__ == '__main__':
     print(app.url_map)

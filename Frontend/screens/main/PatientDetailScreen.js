@@ -372,10 +372,13 @@ const PatientDetailScreen = () => {
   )
 
   const renderSessionsTab = () => (
-    <View style={styles.tabContent}>
-      <Title style={styles.sessionsTitle}>Session Videos</Title>
+<View style={styles.tabContent}>
+    <Title style={styles.sessionsTitle}>Session Videos</Title>
 
-      {sessionsArray.map((session) => (
+    {sessionsArray.length === 0 ? (
+      <Text style={styles.noSessionText}>No sessions available</Text>
+    ) : (
+      sessionsArray.map((session) => (
         <Card key={session.id} style={styles.sessionCard} onPress={() => handleVideoPress(session)}>
           <Card.Cover source={{ uri: session.thumbnailUrl }} style={styles.sessionThumbnail} />
           <View style={styles.playIconContainer}>
@@ -385,17 +388,17 @@ const PatientDetailScreen = () => {
             <Title style={styles.sessionTitle}>{session.title}</Title>
             <View style={styles.sessionMeta}>
               <Chip icon="calendar" style={styles.sessionChip}>
-              {new Date(session.date.$date).toLocaleString()}
+                {new Date(session.date.$date).toLocaleString()}
               </Chip>
               <Chip icon="clock" style={styles.sessionChip}>
                 {session.duration}
               </Chip>
             </View>
-            
           </Card.Content>
         </Card>
-      ))}
-    </View>
+      ))
+    )}
+  </View>
   )
 // <Paragraph style={styles.sessionNotes}>{session.notes}</Paragraph>
   if (isLoading) {
