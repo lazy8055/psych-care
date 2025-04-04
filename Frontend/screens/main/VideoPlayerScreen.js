@@ -6,7 +6,9 @@ import {
   TouchableOpacity,
   ScrollView,
   StatusBar,
-  Platform
+  Platform,
+  Alert,
+  Linking
 } from 'react-native';
 import { 
   Text, 
@@ -25,7 +27,6 @@ import { useRoute, useNavigation } from '@react-navigation/native';
 import theme from '../../config/theme';
 import API_ENDPOINTS from "../../config/api"
 import { useAuth } from "../../context/AuthContext"
-//import Video from '@expo/video';
 
 const { width, height } = Dimensions.get('window');
 
@@ -36,49 +37,162 @@ const VideoPlayerScreen = () => {
   const [note, setNote] = useState('');
   const [notes, setNotes] = useState([]);
   const [currentTime, setCurrentTime] = useState(0);
+  const [isGeneratingReport, setIsGeneratingReport] = useState(false);
+  const [reportUrl, setReportUrl] = useState(null);
+  const [isGeneratingInsights, setIsGeneratingInsights] = useState(false);
+const [insightsUrl, setInsightsUrl] = useState(null);
   const videoRef = useRef(null);
   const controlsTimeoutRef = useRef(null);
   const route = useRoute();
   const navigation = useNavigation();
   const { session } = route.params;
-  const { token } = useAuth()
-  
+  const { token } = useAuth();
+
   useEffect(() => {
-    // Mock notes data
-   /* setNotes([
-      {
-        id: 'n1',
-        text: 'Patient shows significant improvement in anxiety symptoms compared to last session.',
-        timestamp: 120, // 2 minutes
-        createdAt: '2023-05-15T09:15:00Z',
-      },
-      {
-        id: 'n2',
-        text: 'Discussed new coping strategies for work-related stressors.',
-        timestamp: 300, // 5 minutes
-        createdAt: '2023-05-15T09:18:00Z',
-      },
-      {
-        id: 'n3',
-        text: 'Patient reports better sleep quality after implementing relaxation techniques.',
-        timestamp: 450, // 7.5 minutes
-        createdAt: '2023-05-15T09:22:00Z',
-      },
-    ]); */
-    setNotes(session.notes)
-    
-    // Set up status bar for fullscreen mode
-    if (isFullscreen) {
-      StatusBar.setHidden(true);
-    }
+    setNotes(session.notes?session.notes : []);
+    checkExistingReport();
+    checkExistingInsights();
+    if (isFullscreen) StatusBar.setHidden(true);
     
     return () => {
       StatusBar.setHidden(false);
-      if (controlsTimeoutRef.current) {
-        clearTimeout(controlsTimeoutRef.current);
-      }
+      if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
     };
   }, [isFullscreen]);
+  const checkExistingInsights = async () => {
+    try {
+      const response = await fetch(API_ENDPOINTS.CHECK_INSIGHTS(session._id.$oid), {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      const data = await response.json();
+      if (data.exists) setInsightsUrl(data.url);
+    } catch (error) {
+      console.error('Insights check error:', error);
+    }
+  };
+  const checkExistingReport = async () => {
+    try {
+      const response = await fetch(API_ENDPOINTS.CHECK_REPORT(session._id.$oid), {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      const data = await response.json();
+      if (data.exists) setReportUrl(data.url);
+    } catch (error) {
+      console.error('Report check error:', error);
+    }
+  };
+  const generateInsights = async () => {
+    try {
+      setIsGeneratingInsights(true);
+      const response = await fetch(API_ENDPOINTS.GENERATE_INSIGHTS(session._id.$oid), {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      const data = await response.json();
+      
+      if (data.success) {
+        setInsightsUrl(data.url);
+        Alert.alert('Success', 'Insights generated successfully!');
+      } else {
+        Alert.alert('Error', data.message || 'Insights generation failed');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to generate insights');
+    } finally {
+      setIsGeneratingInsights(false);
+    }
+  };
+  
+
+  const generateReport = async () => {
+    try {
+      setIsGeneratingReport(true);
+      const response = await fetch(API_ENDPOINTS.GENERATE_REPORT(session._id.$oid), {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      const data = await response.json();
+      
+      if (data.success) {
+        setReportUrl(data.url);
+        Alert.alert('Success', 'Report generated successfully!');
+      } else {
+        Alert.alert('Error', data.message || 'Report generation failed');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to generate report');
+    } finally {
+      setIsGeneratingReport(false);
+    }
+  };
+
+  const handleDownloadReport = async () => {
+    if (reportUrl) {
+      try {
+        await Linking.openURL(reportUrl);
+      } catch (error) {
+        Alert.alert('Error', 'Failed to open PDF');
+      }
+    }
+  };
+
+  // Rest of your existing video player functions (handlePlaybackStatusUpdate, togglePlayPause, etc.)
+  const renderInsightsSection = () => (
+    <Surface style={styles.reportSection}>
+      <Title style={styles.notesTitle}>Session Insights</Title>
+      <Divider style={styles.divider} />
+      
+      {insightsUrl ? (
+        <Button 
+          mode="contained" 
+          icon="chart-box" 
+          onPress={() => Linking.openURL(insightsUrl)}
+          style={styles.reportButton}
+        >
+          Download Insights
+        </Button>
+      ) : (
+        <Button 
+          mode="outlined" 
+          icon="chart-areaspline" 
+          onPress={generateInsights}
+          loading={isGeneratingInsights}
+          disabled={isGeneratingInsights}
+          style={styles.reportButton}
+        >
+          {isGeneratingInsights ? 'Analyzing...' : 'Generate Insights'}
+        </Button>
+      )}
+    </Surface>
+  );
+  const renderReportSection = () => (
+    <Surface style={styles.reportSection}>
+      <Title style={styles.notesTitle}>Session Report</Title>
+      <Divider style={styles.divider} />
+      
+      {reportUrl ? (
+        <Button 
+          mode="contained" 
+          icon="file-download" 
+          onPress={handleDownloadReport}
+          style={styles.reportButton}
+        >
+          Download Report
+        </Button>
+      ) : (
+        <Button 
+          mode="outlined" 
+          icon="file-document" 
+          onPress={generateReport}
+          loading={isGeneratingReport}
+          disabled={isGeneratingReport}
+          style={styles.reportButton}
+        >
+          {isGeneratingReport ? 'Generating...' : 'Generate Report'}
+        </Button>
+      )}
+    </Surface>
+  );
   
   const handlePlaybackStatusUpdate = (playbackStatus) => {
     setStatus(playbackStatus);
@@ -302,8 +416,10 @@ const VideoPlayerScreen = () => {
           Add
         </Button>
       </View>
-      
-      {notes.length > 0 ? (
+      console.log("Notes:", notes); // Check if notes is received correctly
+
+      {Array.isArray(notes)&&notes.length > 0 ? (
+        
         notes.sort((a, b) => a.timestamp - b.timestamp).map(noteItem => (
           <Surface key={noteItem.id} style={styles.noteItem}>
             <TouchableOpacity 
@@ -335,6 +451,8 @@ const VideoPlayerScreen = () => {
       <ScrollView style={styles.scrollContainer}>
         {renderSessionInfo()}
         {renderNotes()}
+        {renderInsightsSection()}
+        {renderReportSection()}
       </ScrollView>
     </View>
   );
@@ -494,6 +612,15 @@ const styles = StyleSheet.create({
   emptyNotesText: {
     marginTop: 8,
     color: theme.colors.placeholder,
+  },
+  reportSection: {
+    padding: 16,
+    borderRadius: 12,
+    marginTop: 16,
+    elevation: 2,
+  },
+  reportButton: {
+    marginVertical: 8,
   },
 });
 

@@ -19,11 +19,24 @@ import ChatbotScreen from './screens/main/ChatbotScreen';
 import ProfileScreen from './screens/main/ProfileScreen';
 import VideoPlayerScreen from './screens/main/VideoPlayerScreen';
 import AddVideoScreen from './screens/main/AddVideoScreen';
+import MedicationManagementScreen from './screens/main/MedicationManagementScreen';
 
 // Theme and Config
 import theme from './config/theme';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import AddPatientScreen from './screens/main/AddPatientScreen';
+
+import LandingScreen from './screens/LandingScreen';
+import UserTypeSelectionScreen from './screens/UserTypeSelectionScreen';
+import ClientAuthOptionsScreen from './screens/client/ClientAuthOptionsScreen';
+import ClientLoginScreen from './screens/client/ClientLoginScreen';
+import ClientRegisterScreen from './screens/client/ClientRegisterScreen';
+
+import ClientChatbotScreen from './screens/client/ClientBot';
+import { AuthProvider2, useAuth2 } from './context/ClientAuthContext';
+import AppointmentScreen from './screens/client/AppointmentScreen';
+import ClientProfileScreen from './screens/client/ClientProfileScreen';
+
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -60,6 +73,36 @@ const MainTabs = () => {
   );
 };
 
+const ClientTabs = () => {
+  return (
+    <Tab.Navigator
+      screenOptions={({ route }) => ({
+        tabBarIcon: ({ focused, color, size }) => {
+          let iconName;
+
+          if (route.name === 'Appointments') {
+            iconName = focused ? 'calendar' : 'calendar-outline';
+          } else if (route.name === 'Chatbot') {
+            iconName = focused ? 'chatbubbles' : 'chatbubbles-outline';
+          } else if (route.name === 'Profile') {
+            iconName = focused ? 'person' : 'person-outline';
+          }
+
+          return <Ionicons name={iconName} size={size} color={color} />;
+        },
+        tabBarActiveTintColor: theme.colors.primary,
+        tabBarInactiveTintColor: 'gray',
+        headerShown: false,
+      })}
+    >
+      <Tab.Screen name="Profile" component={ClientProfileScreen} />
+      <Tab.Screen name="Appointments" component={AppointmentScreen} />
+      <Tab.Screen name="Chatbot" component={ClientChatbotScreen} />
+      
+    </Tab.Navigator>
+  );
+};
+
 const AppNavigator = () => {
   const { isAuthenticated, isLoading } = useAuth();
 
@@ -73,6 +116,18 @@ const AppNavigator = () => {
         {!isAuthenticated ? (
           // Auth Stack
           <>
+            <Stack.Screen name="LandingScreen" component={LandingScreen} />
+            <Stack.Screen name="UserTypeSelection" component={UserTypeSelectionScreen} />
+            <Stack.Screen name="ClientAuthOptions" component={ClientAuthOptionsScreen} />
+        <Stack.Screen name="ClientLogin" component={ClientLoginScreen} />
+        <Stack.Screen name="ClientRegister" component={ClientRegisterScreen} />
+        
+        
+        <Stack.Screen name="ClientTabs" component={ClientTabs} />
+           
+          
+        {/* Doctor Authentication Screens */}
+        
             <Stack.Screen name="Login" component={LoginScreen} />
             <Stack.Screen name="Register" component={RegisterScreen} />
           </>
@@ -100,6 +155,12 @@ const AppNavigator = () => {
               component={AddPatientScreen}
               options={{ headerShown: true, title: 'Add Patients' }}
             />
+
+            <Stack.Screen 
+              name="Medicine" 
+              component={MedicationManagementScreen}
+              options={{ headerShown: true, title: 'Medicine' }}
+            />
           </>
         )}
       </Stack.Navigator>
@@ -111,10 +172,12 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <PaperProvider theme={theme}>
+        <AuthProvider2>
         <AuthProvider>
           <StatusBar barStyle="dark-content" backgroundColor="#fff" />
           <AppNavigator />
         </AuthProvider>
+        </AuthProvider2>
       </PaperProvider>
     </SafeAreaProvider>
   );

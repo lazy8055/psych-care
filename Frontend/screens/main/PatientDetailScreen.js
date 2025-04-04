@@ -28,7 +28,7 @@ const { width } = Dimensions.get("window")
 
 const PatientDetailScreen = () => {
  
-  const [sessionsArray, setSession] = useState(null)
+  const [sessionsArray, setSession] = useState([])
   const [patient, setPatient] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -175,8 +175,8 @@ const PatientDetailScreen = () => {
         setPatient(data.patient);
         setIsLoading(false);
       
-        setTimeout(() => {
-          setSession(data.patient.sessions);  // Use `data.patient`, not `patient`
+         setTimeout(() => {
+           setSession(data.patient.sessions);  // Use `data.patient`, not `patient`
         }, 1000);
       
       }, 1000);
@@ -206,10 +206,15 @@ const PatientDetailScreen = () => {
     navigation.navigate("AddVideo", { patientId })
   }
 
+  const handleMedicine = () => {
+    setFabOpen(false)
+    navigation.navigate("Medicine", { patientId })
+  }
+
   const handleDeletePatient = () => {
     setShowDeleteDialog(false)
     // In a real app, you would call your API to delete the patient
-    // Then navigate back
+    // Then navigate back handleMedicine
     navigation.goBack()
   }
 
@@ -523,16 +528,17 @@ const PatientDetailScreen = () => {
               label: "Add Document",
               onPress: () => console.log("Add document"),
             },
-            {
-              icon: "note-plus",
-              label: "Add Note",
-              onPress: () => console.log("Add note"),
-            },
+            
             {
               icon: "delete",
               label: "Delete Patient",
               color: theme.colors.error,
               onPress: () => setShowDeleteDialog(true),
+            },
+            {
+              icon: "pill",
+              label: "Modify Medicine",
+              onPress: handleMedicine,
             },
           ]}
           onStateChange={({ open }) => setFabOpen(open)}

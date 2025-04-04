@@ -33,7 +33,7 @@ const AddVideoScreen = () => {
     title: '',
     date: new Date().toISOString().split('T')[0],
     duration: '',
-    notes: '',
+   
     videoUri: null,
     thumbnailUri: null,
   });
@@ -146,7 +146,7 @@ const AddVideoScreen = () => {
        formData.append('title', videoData.title);
        formData.append('date', videoData.date);
        formData.append('duration', videoData.duration);
-       formData.append('notes', videoData.notes);
+       
        formData.append('video', {
          uri: videoData.videoUri,
          name: 'video.mp4',
@@ -239,15 +239,7 @@ const AddVideoScreen = () => {
           />
           {errors.duration && <HelperText type="error">{errors.duration}</HelperText>}
           
-          <TextInput
-            label="Session Notes"
-            value={videoData.notes}
-            onChangeText={(text) => updateField('notes', text)}
-            style={styles.input}
-            mode="outlined"
-            multiline
-            numberOfLines={4}
-          />
+          
           
           <Divider style={styles.divider} />
           
