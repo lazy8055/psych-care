@@ -20,18 +20,6 @@ Psycare bridges this gap by integrating:
 
 ---
 
-## 🌐 Live Demo / Screenshots
-
-> ⚠️ *Not yet hosted publicly*  
-> You can run the app locally using the instructions below.
-
-<p align="center">
-  <img src="screenshots/doctor_dashboard.png" width="400"/>
-  <img src="screenshots/emotion_graph.png" width="400"/>
-</p>
-
----
-
 ## 🧩 Features
 
 ### 👨‍⚕️ Doctor Portal
@@ -89,6 +77,11 @@ Psycare bridges this gap by integrating:
 ---
 
 ## 🏗️ System Architecture (Simplified)
+
+![image](https://github.com/user-attachments/assets/51963749-fa07-45a3-a977-255ceda1693b)
+
+---
+
 ## Project Structure
 ```
 📦 
